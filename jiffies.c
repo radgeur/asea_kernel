@@ -6,12 +6,16 @@
 #include <linux/jiffies.h>
 #include <linux/string.h>
 #include <asm/uaccess.h>
+#include <linux/proc_fs.h>
 
 #define JIFFIES_BUFFER_LEN 4
 static char jiffies_buffer[JIFFIES_BUFFER_LEN];
 static int  jiffies_flag = 0;
+static const struct file_operations jiffies_proc_fops;
 
-static int 
+static struct proc_dir_entry  *ase;
+
+static int
 jiffies_proc_show(struct seq_file *m, void *v)
 {
     if (jiffies_flag)
@@ -20,9 +24,10 @@ jiffies_proc_show(struct seq_file *m, void *v)
     return 0;
 }
 
-static int 
+static int
 jiffies_proc_open(struct inode *inode, struct file *file)
 {
+
     return single_open(file, jiffies_proc_show, NULL);
 }
 
@@ -43,7 +48,9 @@ jiffies_proc_write(struct file *filp, const char __user *buff,
 
     kstrtol(jiffies_buffer, 0, &res);
     jiffies_flag = res;
+    snprintf(jiffies_buffer, 10, "%d", jiffies_flag);
 
+    proc_create(jiffies_buffer, 0666, ase, &jiffies_proc_fops);
     return len;
 }
 
@@ -59,14 +66,20 @@ static const struct file_operations jiffies_proc_fops = {
 static int __init
 jiffies_proc_init(void)
 {
-    proc_create("crash_jiffies", 0666, NULL, &jiffies_proc_fops);
+    proc_create("ase_cmd", 0666, NULL, &jiffies_proc_fops);
+    ase = proc_mkdir("ase", NULL);
+    //proc_create("crash_jiffies", 0666, NULL, &jiffies_proc_fops);
+
     return 0;
+
 }
 
 static void __exit
 jiffies_proc_exit(void)
 {
-    remove_proc_entry("crash_jiffies", NULL);
+    remove_proc_entry("ase_cmd",NULL);
+    remove_proc_entry("ase",NULL);
+    //remove_proc_entry("crash_jiffies", NULL);
 }
 
 module_init(jiffies_proc_init);
