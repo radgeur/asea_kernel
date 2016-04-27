@@ -22,9 +22,9 @@ static int cptpid = 0;
 static int
 jiffies_proc_show(struct seq_file *m, void *v)
 {
-    if (jiffies_flag)
+    /*if (jiffies_flag)
         seq_printf(m, "%llu\n",
-                   (unsigned long long) get_jiffies_64());
+                   (unsigned long long) get_jiffies_64());*/
     return 0;
 }
 
@@ -54,7 +54,7 @@ jiffies_proc_write(struct file *filp, const char __user *buff,
     kstrtol(jiffies_buffer, 0, &res);
     //jiffies_flag content the echo
     jiffies_flag = res;
-
+    //task = pid_task(find_vpid(jiffies_flag, PIDTYPE_PID)) if(task)
     //if the pid exist
     if(find_vpid(jiffies_flag)!=NULL) {
         //copy the content of jiffies_flag in jiffies_buffer
@@ -96,8 +96,13 @@ jiffies_proc_init(void)
 static void __exit
 jiffies_proc_exit(void)
 {
+    int i;
     remove_proc_entry("ase_cmd",NULL);
     remove_proc_entry("ase",NULL);
+    for(i=0;i<cptpid;i++){
+        snprintf(jiffies_buffer, 10, "%d", pid_list[i]);
+        remove_proc_entry(jiffies_buffer, ase);
+    }
     //remove_proc_entry("crash_jiffies", NULL);
 }
 
