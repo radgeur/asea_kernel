@@ -7,13 +7,17 @@
 #include <linux/string.h>
 #include <asm/uaccess.h>
 #include <linux/proc_fs.h>
+#include <linux/sched.h>
 
-#define JIFFIES_BUFFER_LEN 4
+#define NBMAX_PID 512
+#define JIFFIES_BUFFER_LEN 6
 static char jiffies_buffer[JIFFIES_BUFFER_LEN];
 static int  jiffies_flag = 0;
 static const struct file_operations jiffies_proc_fops;
 
 static struct proc_dir_entry  *ase;
+static int pid_list[NBMAX_PID];
+static int cptpid = 0;
 
 static int
 jiffies_proc_show(struct seq_file *m, void *v)
@@ -24,6 +28,7 @@ jiffies_proc_show(struct seq_file *m, void *v)
     return 0;
 }
 
+//when a file opening
 static int
 jiffies_proc_open(struct inode *inode, struct file *file)
 {
@@ -31,6 +36,7 @@ jiffies_proc_open(struct inode *inode, struct file *file)
     return single_open(file, jiffies_proc_show, NULL);
 }
 
+//when write somethinf in a file
 static ssize_t
 jiffies_proc_write(struct file *filp, const char __user *buff,
                    size_t len, loff_t *data)
@@ -45,15 +51,28 @@ jiffies_proc_write(struct file *filp, const char __user *buff,
         return -2;
     }
     jiffies_buffer[len] = 0;
-
     kstrtol(jiffies_buffer, 0, &res);
+    //jiffies_flag content the echo
     jiffies_flag = res;
-    snprintf(jiffies_buffer, 10, "%d", jiffies_flag);
 
-    proc_create(jiffies_buffer, 0666, ase, &jiffies_proc_fops);
+    //if the pid exist
+    if(find_vpid(jiffies_flag)!=NULL) {
+        //copy the content of jiffies_flag in jiffies_buffer
+        snprintf(jiffies_buffer, 10, "%d", jiffies_flag);
+        //create a file in proc/ase with the pid give in jiffies_buffer
+        proc_create(jiffies_buffer, 0666, ase, &jiffies_proc_fops);
+        pid_list[cptpid] = jiffies_flag;
+        cptpid++;
+    } else{
+        printk(KERN_INFO "JIFFIES: error, this pid doesn't exist");
+    }
+
+
+
     return len;
 }
 
+//struct for call the right function at the right moment with the corresponding function
 static const struct file_operations jiffies_proc_fops = {
     .owner      = THIS_MODULE,
     .open       = jiffies_proc_open,
